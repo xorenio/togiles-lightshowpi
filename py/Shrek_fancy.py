@@ -65,6 +65,7 @@ def pull_in_pinochios_nose():
 ## START OF ACTION RUNNER
 
 def run_current_action():
+  last_action_number = current_action_number
   if current_action_number == 0:
     
     # gpio 5 to PUSH OUT pinochios nose
