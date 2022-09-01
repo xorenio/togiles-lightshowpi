@@ -68,7 +68,7 @@ install_init() {
         *)
             log Detected unknown distribution. Please verify that "'$DISTRO'" is supported and update this script.
             log To add support for "'$DISTRO'" create a script with that name in "install-scripts"
-            exit 1
+            # exit 1
             ;;
     esac
 

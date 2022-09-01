@@ -63,7 +63,8 @@ signal.signal(signal.SIGINT, signal.SIG_IGN)
 is_a_raspberryPI = Platform.platform_detect() == 1
 
 if is_a_raspberryPI:
-    import wiringpipy as wiringpi
+    import wiringpi
+    #import wiringpipy as wiringpi
 else:
     # if this is not a RPi
     import wiring_pi as wiringpi
@@ -122,14 +123,14 @@ class Hardware(object):
                 if device.lower() == "mcp23008":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.mcp23008SetupPY(int(params['pinBase']),
+                        wiringpi.mcp23008Setup(int(params['pinBase']),
                                                int(params['i2cAddress'],
                                                    16))
 
                 elif device.lower() == "mcp23s08":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.mcp23s08SetupPY(int(params['pinBase']),
+                        wiringpi.mcp23s08Setup(int(params['pinBase']),
                                                int(params['spiPort'],
                                                    16),
                                                int(params['devId']))
@@ -137,21 +138,21 @@ class Hardware(object):
                 elif device.lower() == "mcp23016":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.mcp23016SetupPY(int(params['pinBase']),
+                        wiringpi.mcp23016Setup(int(params['pinBase']),
                                                int(params['i2cAddress'],
                                                    16))
 
                 elif device.lower() == "mcp23017":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.mcp23017SetupPY(int(params['pinBase']),
+                        wiringpi.mcp23017Setup(int(params['pinBase']),
                                                int(params['i2cAddress'],
                                                    16))
 
                 elif device.lower() == "mcp23s17":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.mcp23s17SetupPY(int(params['pinBase']),
+                        wiringpi.mcp23s17Setup(int(params['pinBase']),
                                                int(params['spiPort'],
                                                    16),
                                                int(params['devId']))
@@ -159,7 +160,7 @@ class Hardware(object):
                 elif device.lower() == "sr595":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.sr595SetupPY(int(params['pinBase']),
+                        wiringpi.sr595Setup(int(params['pinBase']),
                                             int(params['numPins']),
                                             int(params['dataPin']),
                                             int(params['clockPin']),
@@ -168,7 +169,7 @@ class Hardware(object):
                 elif device.lower() == "pcf8574":
                     for slave in device_slaves:
                         params = slave
-                        wiringpi.pcf8574SetupPY(int(params['pinBase']),
+                        wiringpi.pcf8574Setup(int(params['pinBase']),
                                               int(params['i2cAddress'],
                                                   16))
 
@@ -188,7 +189,7 @@ class Hardware(object):
         for channel in range(cm.hardware.gpio_len):
             self.channels.append(Channel(cm.hardware.gpio_pins[channel],
                                          cm.hardware.is_pin_pwm[channel],
-                                         cm.hardware.active_low_mode[channel],
+                                         cm.hardware.active_low_mode,
                                          cm.hardware.pwm_range,
                                          cm.hardware.piglow))
 
@@ -331,7 +332,7 @@ class Hardware(object):
 
     def initialize(self,reset=True):
         """Set pins as outputs and start all lights in the off state."""
-        wiringpi.wiringPiSetupPY()
+        wiringpi.wiringPiSetup()
         self.enable_device()
         self.set_pins_as_outputs()
         if reset:
@@ -359,19 +360,19 @@ class Channel(object):
         self.inverted = False
 
         if self.pwm:
-            self.action = lambda b: wiringpi.softPwmWritePY(self.pin_number,
+            self.action = lambda b: wiringpi.softPwmWrite(self.pin_number,
                                                           int(b * self.pwm_max))
         elif piglow:
-            self.action = lambda b: wiringpi.analogWritePY(self.pin_number + 577, int(b * 255))
+            self.action = lambda b: wiringpi.analogWrite(self.pin_number + 577, int(b * 255))
         else:
-            self.action = lambda b: wiringpi.digitalWritePY(self.pin_number, int(b > 0.5))
+            self.action = lambda b: wiringpi.digitalWrite(self.pin_number, int(b > 0.5))
 
     def set_as_input(self):
         """
         set up this pin as input
         """
         self.inout = 'pin is input'
-        wiringpi.pinModePY(self.pin_number, 0)
+        wiringpi.pinMode(self.pin_number, 0)
 
     def set_as_output(self):
         """
@@ -379,9 +380,9 @@ class Channel(object):
         """
         self.inout = 'pin is output'
         if self.pwm:
-            wiringpi.softPwmCreatePY(self.pin_number, 0, self.pwm_max)
+            wiringpi.softPwmCreate(self.pin_number, 0, self.pwm_max)
         else:
-            wiringpi.pinModePY(self.pin_number, 1)
+            wiringpi.pinMode(self.pin_number, 1)
 
     def set_always_on(self, value):
         """
@@ -704,142 +705,6 @@ def dance():
                 light_off(lights2[light], False, 0.0)
 
 
-def even_odd_alt_flash(iteration, lights, sleepTime, pwnSleepTime):            # Jack Thomas
-    """
-    Even and Odd Alternating Flash
-    This is a helper function that will loop through the provided lights list
-    and will alternate which lights are on (even or odd) depending on the
-    provided iteration. Note that sleep time and pwm sleep time are also 
-    provided to this function.
-    Parameters:
-    iteration    int
-    lights       list of ints
-    sleepTime    float
-    pwmSleepTime float
-    """
-    # Loop through all lights provided
-    for light in lights:
-        # PIN is PWN channel
-        if cm.hardware.is_pin_pwm[light]:
-            # This is an even iteration
-            if iteration % 2 == 0: 
-                if light % 2 == 0: 
-                    # fade in
-                    for brightness in range(0, pwm_max):
-                        light_on(light, False, float(brightness) / pwm_max)
-                        time.sleep(pwmSleepTime / pwm_max)
-                    
-                    # fade out
-                    for brightness in range(pwm_max - 1, -1, -1):
-                        light_on(light, False, float(brightness) / pwm_max)
-                        time.sleep(pwmSleepTime / pwm_max)
-            # This is an odd iteration
-            else:
-                if light % 2 != 0: 
-                    # fade in
-                    for brightness in range(0, pwm_max):
-                        light_on(light, False, float(brightness) / pwm_max)
-                        time.sleep(pwmSleepTime / pwm_max)
-                    
-                    # fade out
-                    for brightness in range(pwm_max - 1, -1, -1):
-                        light_on(light, False, float(brightness) / pwm_max)
-                        time.sleep(pwmSleepTime / pwm_max)
-        # PIN is ON/OFF channel
-        else:
-            # This is an even iteration
-            if iteration % 2 == 0: 
-                if light % 2 == 0:
-                    light_on(light, False, 1.0)
-                else:
-                    light_off(light, False, 0.0)
-            # This is an odd iteration
-            else:
-                if light % 2 != 0:
-                    light_on(light, False, 1.0)
-                else:
-                    light_off(light, False, 0.0)
-    # Sleep after looping through all lights
-    time.sleep(sleepTime)
-
-
-def sprinkler():                                                               # Jack Thomas
-    """
-    First alternate between even and odd lights slowly, 
-    then alternate between even and odd lights quickly,
-    resembling the pattern of a lawn sprinkler.
-    """
-    # Sleep times in seconds
-    SLOW_SLEEP_TIME = 1.0
-    QUICK_SLEEP_TIME = 0.2
-
-    # This is the iteration list,
-    # must contain 1 even number and 1 odd number
-    ITERATIONS = [0,1]
-
-    # get cm.hardware.pwm_range from the hc module
-    # this is the max value for the pwm channels
-    pwm_max = cm.hardware.pwm_range
-
-    # Initializations for slow and quick flashing
-    # Begin with slow flashing
-    flash = True
-    count = 0    
-    sleepTime = SLOW_SLEEP_TIME
-
-    # Do this until ^c or --state=off
-    print("Press <CTRL>-C to stop")
-    while True:
-        for iteration in ITERATIONS:
-            # Decide which lights to turn on/off
-            even_odd_alt_flash(iteration, lights, sleepTime, QUICK_SLEEP_TIME)
-
-            # Alternate between quick flashing and slow flashing
-            if count >= int(len(lights)):
-                if flash: # flash == True
-                    sleepTime = QUICK_SLEEP_TIME
-                    # Switch to slow flashing for next time
-                    flash = False
-                else: # flash == False
-                    sleepTime = SLOW_SLEEP_TIME
-                    # Switch to quick flashing for next time
-                    flash = True
-                count = 0
-            else:
-                count += 1
-
-
-def half_flash():                                                              # Jack Thomas
-    """
-    Make the first half of lights flash while the second half are always on
-    """
-    # Sleep times in seconds
-    SLEEP_TIME = 0.75
-    PWM_SLEEP_TIME = 0.1
-    
-    # This is the iteration list,
-    # must contain 1 even number and 1 odd number
-    ITERATIONS = [0,1]
-
-    # Create the sub-arrays for first and second halves of lights
-    lightCount = int(len(lights))
-    halfCount = int(lightCount / 2)
-    firstHalf = lights[:halfCount]
-    secondHalf = lights[halfCount:]
-
-    # Turn on (and leave on) the second half of lights
-    for light in secondHalf:
-        light_on(light, False, 1.0)
-
-    # Do this until ^c or --state=off
-    print("Press <CTRL>-C to stop")
-    # Flash the first half of lights
-    while True:
-        for iteration in ITERATIONS:
-            # Decide which lights to turn on/off in the first half
-            even_odd_alt_flash(iteration, firstHalf, SLEEP_TIME, PWM_SLEEP_TIME)
-
-
 def step():
     """Test fading in and out for each light configured in pwm mode"""
     print("Press <CTRL>-C to stop")
@@ -998,12 +863,6 @@ def main():
     elif state == "dance":
         dance()
 
-    elif state == "sprinkler":
-        sprinkler()
-
-    elif state == "half_flash":
-        half_flash()
-
     elif state == "step":
         step()
 
@@ -1023,12 +882,10 @@ if __name__ == "__main__":
                                             "random_pattern",
                                             "cylon",
                                             "dance",
-                                            "sprinkler",
-                                            "half_flash",
                                             "step",
                                             "cleanup"],
                         help='turn off, on, flash, fade, random_pattern, cylon, '
-                             'dance, step, sprinkler, half_flash, or cleanup')
+                             'dance, step or cleanup')
     parser.add_argument('--test', action="store_true",
                         help='Run a basic hardware test')
 

@@ -18,6 +18,8 @@ import numpy
 import serial
 import time
 
+#from bibliopixel.util.colors import colors
+
 import bibliopixel.colors as colors
 import bibliopixel.util.image as image
 import bibliopixel.layout.font as font

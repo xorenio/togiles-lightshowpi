@@ -29,12 +29,12 @@ import argparse
 from collections import defaultdict
 
 # The home directory and configuration directory for the application.
-HOME_DIR = os.getenv("SYNCHRONIZED_LIGHTS_HOME")
-
-if not HOME_DIR:
-    print("Need to setup SYNCHRONIZED_LIGHTS_HOME environment variable, "
-          "see readme")
-    sys.exit()
+#HOME_DIR = os.getenv("SYNCHRONIZED_LIGHTS_HOME")
+HOME_DIR = "/home/pi/lightshowpi"
+#if not HOME_DIR:
+#    print("Need to setup SYNCHRONIZED_LIGHTS_HOME environment variable, "
+#          "see readme")
+#    sys.exit()
 
 CONFIG_DIR = HOME_DIR + '/config'
 LOG_DIR = HOME_DIR + '/logs'
@@ -67,8 +67,10 @@ class Configuration(object):
         self.playlist = None
         self.playlist_path = None
 
+        
+
         # path and file locations
-        self.home_dir = os.getenv("SYNCHRONIZED_LIGHTS_HOME")
+        self.home_dir = "/home/pi/lightshowpi"
         self.config_dir = self.home_dir + "/config/"
         self.log_dir = self.home_dir + "/logs/"
         self.state_file = self.config_dir + "state.cfg"
@@ -108,7 +110,6 @@ class Configuration(object):
             self.set_audio_processing()
             self.set_network()
             self.set_terminal()
-            self.set_custom_sequences()
         else:
             self.sms = None
             self.who_can = dict()
@@ -227,13 +228,8 @@ class Configuration(object):
         hrdwr["is_pin_pwm"] = [True if pin == "pwm" else False for pin in hrdwr["pin_modes"]]
 
         hrdwr["pwm_range"] = int(self.config.get('hardware', 'pwm_range'))
+        hrdwr["active_low_mode"] = self.config.getboolean('hardware', 'active_low_mode')
         hrdwr["piglow"] = self.config.getboolean('hardware', 'piglow')
-
-        temp = self.config.get('hardware', 'active_low_mode').split(",")
-        if len(temp) != 1:
-            hrdwr["active_low_mode"] = [self.config._convert_to_boolean(t) for t in temp]
-        else:
-            hrdwr["active_low_mode"] = [self.config._convert_to_boolean(temp[0]) for _ in range(self.gpio_len)]
 
         self.hardware = Section(hrdwr)
 
@@ -244,12 +240,6 @@ class Configuration(object):
         term = dict()
         term["enabled"] = self.config.getboolean('terminal', 'enabled')
         self.terminal = Section(term)
-
-    def set_custom_sequences(self):
-        scs = dict()
-        scs["timing"] = self.config.getint('custom_sequences', 'timing')
-        scs["brightness_range"] = self.config.getint('custom_sequences', 'brightness_range')
-        self.custom_sequences = Section(scs)
 
     def set_led(self, config_file):
         """
