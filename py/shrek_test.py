@@ -32,9 +32,10 @@ GPIO. setup(13, GPIO.OUT)
 ## START TEST
 #
 #
-
+# $ (mpg123 -q "Serenity-1130896858.mp3" &) && sleep $(soxi -D "Serenity-1130896858.mp3") && killall mpg123
 # Make\ Way\ for\ Noddy.mp3
-os.system('mpg123 -q Make\ Way\ for\ Noddy.mp3 && exit &')
+os.system('mpg123 -q Make\ Way\ for\ Noddy.mp3 &') ## Play sound
+os.system('sleep $(soxi -D Make\ Way\ for\ Noddy.mp3) && killall mpg123 &') ## sleep for length of sound then kill mpg123
 subprocess.call("sudo python synchronized_lights.py --file=/home/pi/lightshowpi/py/Make\ Way\ for\ Noddy.mp3", shell=True)
 
 #
